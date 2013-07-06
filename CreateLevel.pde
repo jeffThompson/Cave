@@ -17,7 +17,8 @@ void createLevel() {
   // random walk
   for (int i=0; i<numSteps; i++) {
     float r = level.pixels[py * w + px] >> 16 & 0xFF;   // get current color
-    r += inc;
+    if (r == 0) r = minTileBrightness;
+    else r += inc;
     r = constrain(r, 0,255);
     level.pixels[py * w + px] = color(r);
 

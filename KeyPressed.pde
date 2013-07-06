@@ -34,4 +34,3 @@ void keyPressed() {
     tileSize = min(width, height) / (visionDistance*2 + 1);   // update tile size
   }
 }
-

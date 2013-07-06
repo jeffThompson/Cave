@@ -77,9 +77,18 @@ void movePlayer(char dir) {
 }
 
 void respawn() {
-  int newPoint = int(random(numRespawnPoints));
+  int px = x;
+  int py = y; 
+
+  int newPoint = int(random(numRespawnPoints)); 
   x = respawnPoints[newPoint][0];
   y = respawnPoints[newPoint][1];
+
+  while (x == px && y == py) {
+    newPoint = int(random(numRespawnPoints));
+    x = respawnPoints[newPoint][0];
+    y = respawnPoints[newPoint][1];
+  } 
+
   playRespawn();
 }
-

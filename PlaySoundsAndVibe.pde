@@ -2,9 +2,9 @@
 void playFootsteps() {
 
   // change amount of reverb based on tile  
-  // darker = more reverb/higher, lighter = less/lower
+  // lighter = more reverb/higher, darker = less/lower
   float c = level.pixels[y * w + x] >> 16 & 0xFF;
-  decayTime = int(map(c, 255,0, minReverb, maxReverb));
+  decayTime = int(map(c, minTileBrightness,255, minReverb, maxReverb));
   reverb.setDecayTime(decayTime);
 
   // play sound and vibration pattern
@@ -24,4 +24,3 @@ void playWallHit() {
 void playRespawn() {
   vibe.vibrate(respawnVibration, -1);
 }
-

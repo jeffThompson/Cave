@@ -1,8 +1,6 @@
 
 void drawTiles() {
 
-  noStroke();
-
   for (int ty = -visionDistance; ty <= visionDistance; ty++) {
     for (int tx = -visionDistance; tx <= visionDistance; tx++) {
 
@@ -20,13 +18,12 @@ void drawTiles() {
       int sx = width/2 + (tx*tileSize);
       int sy = height/2 + (ty*tileSize);
 
-      // draw tile
+      // draw tile, dim based on distance from center
       float dist = abs(dist(0,0, tx,ty));
-      float dim = map(dist, 0, visionDistance, 255,0);
+      float dim = map(dist, 0, visionDistance+1, 255,0);
       dim = constrain(dim, 0, 255);
       fill(level.pixels[py * w + px], dim);
       rect(sx, sy, tileSize, tileSize);
     }
   }
 }
-

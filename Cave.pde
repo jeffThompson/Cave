@@ -10,13 +10,15 @@ import android.view.inputmethod.InputMethodManager;   // keyboard
 import android.view.MotionEvent;                      // fancy touch access
 
 /*
-REVERB
+CAVE
  Jeff Thompson | 2013 | www.jeffreythompson.org
  
  Created with generous support from Harvestworks' Cultural Innovation Fund program.
  
  TO DO:
  + Finalize color (random?)
+ + Better tint (dims red, current tile)
+ + Sounds for: wall hit, teleport
  
  TO CONSIDER:
  + Long tap-hold-release for a wall-sweep flash (like the sonar, but all around)
@@ -38,18 +40,22 @@ int visionDistance = 6;                          // radius of tiles shown onscre
 
 color bgColor = color(0);                 // background color (areas of level we can't go)
 color tintColor = color(255, 150, 0);     // overlay color
+int tintStrength = 100;                   // 0 = no tint, 255 = fully opaque (probably not a good idea)
 color playerColor = color(255);           // color of player in center
 color respawnColor = color(255,0,0);      // color of respawn points
 
-boolean startScreen = false;        // show title screen?
+boolean startScreen = true;         // show title screen?
 boolean randomTintColor = true;     // create a random overlay color on load?
 boolean debug = true;               // print debugging info (both onscreen and via USB)
 
 int w = 100;                        // level dimensions
 int h = 100;
-int numSteps = 40000;               // # of steps in random walk
-int inc = 20;                       // color step in random walk (or: how quickly we get to 0)
-int numRespawnPoints = 10;          // # of points that cause the player to spawn in a new location
+int numSteps = 20000;               // # of steps in random walk
+int inc = 40;                       // color step in random walk (or: how quickly we get to 0)
+int minTileBrightness = 50;         // darkest tile (first step from background)
+int numRespawnPoints = 30;          // # of points that cause the player to spawn in a new location
+
+int longPressThresh = 300;          // time (in ms) for long-press (less will be normal click)
 
 int minReverb = 10;                 // min amount of reverb (smallest space)
 int maxReverb = 3000;
@@ -62,22 +68,24 @@ short reflectionsDelay = 0;         // 0 to 300
 short reflectionsLevel = 1000;      // -9k to 1k
 short reverbDelay = 0;              // 0 to 100
 
-long[] footstepVibration = {        // vibration pattern for footsteps
+long[] footstepVibration = {        // vibration pattern for footsteps (off, on, off, on...)
   50, 150, 60, 100
 };
 long[] wallHitVibration = {         // pattern when hitting the wall
-  150,0
+  0,30
 };
 long[] respawnVibration = {         // pattern when respawning
-  100,20,90,20,80,20,70,20,60,20,50,20,40,20,30,20,30,20,20,20,10,150,150,0
+  0,20,90,20,80,20,70,20,60,20,50,20,40,20,30,20,30,20,20,20,10,150,150
 };
 
-PImage level, titleImage;    // level and title screen
-int x, y;                    // player x,y position
-char playerDir = 'u';        // direction player is facing (for drawing player onscreen)
-int tileSize;                // display size of each tile
-PFont font;                  // debugging font
-int prevVisionDistance;      // reset from full zoom-out
+PImage level, titleImage;      // level and title screen
+int x, y;                      // player x,y position
+char playerDir = 'u';          // direction player is facing (for drawing player onscreen)
+int tileSize;                  // display size of each tile
+PFont font;                    // debugging font
+int prevVisionDistance;        // reset from full zoom-out
+long pressTime;                // time (in ms) for detecting long-press
+int startPressX, startPressY;  // location of mouse press (for triggering long-press)
 int[][] respawnPoints = new int[numRespawnPoints][2];
 
 MediaPlayer beep;
@@ -90,6 +98,7 @@ void setup() {
   rectMode(CENTER);
   titleImage = loadImage("TitleScreen.png");
   smooth();
+  noStroke();
 
   // set player to random location
   x = int(random(w));
@@ -115,8 +124,8 @@ void setup() {
 
   // random background/overlay color, if specified
   if (randomTintColor) {
-    // green starts at 1 so we don't accidentally create the respawn color
-    tintColor = color(random(0, 255), random(1, 255), random(1, 255));
+    // just be sure we can't accidentally generate the respawn color
+    tintColor = color(random(50, 150), random(50, 255), random(50, 255));
   }
 }
 
@@ -133,13 +142,16 @@ void draw() {
     drawTiles();
 
     // overlay with background color
-    fill(tintColor, 50);
+    fill(tintColor, tintStrength);
     rect(width/2, height/2, width, height);   // since rectMode = CENTER
 
+    // draw current tile (with no overlay)
+    fill(level.pixels[y*w + x]);
+    rect(width/2,height/2, tileSize,tileSize);
     drawPlayer();
 
     if (debug) {
-      fill(0);
+      fill(255);
       text("POSITION: " + x + ", " + y + "\nHEIGHT:   " + (level.pixels[y * w + x] >> 16 & 0xFF) + "\nVISION:   " + visionDistance, 50, 50);
     }
   }

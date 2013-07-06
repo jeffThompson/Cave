@@ -7,29 +7,40 @@ public boolean dispatchTouchEvent(MotionEvent event) {
   // touch to clear title screen and start gameplay
   if (startScreen && action == MotionEvent.ACTION_DOWN) {
     startScreen = false;
-    fill(bgColor);                          // clear text (seems to solve some weird glitchiness)
-    rect(width/2,height/2, width,height);
-  } 
+    fill(bgColor);                            // clear text (seems to solve some weird glitchiness)
+    rect(width/2, height/2, width, height);
+    pressTime = millis();                     // set to avoid long-press on exit from start screen
+  }
 
-  // drag to move player
+  // when pressed, keep track of time for long-press
+  else if (action == MotionEvent.ACTION_DOWN) {
+    pressTime = millis();
+    startPressX = mouseX;    // store start of press (prevents triggering long-press on movement)
+    startPressY = mouseY;
+  }
+
+  // release triggers either player move or long-press action
   else if (action == MotionEvent.ACTION_UP) {    // also try ACTION_MOVE
-    int diffX = mouseX - pmouseX;
-    int diffY = mouseY - pmouseY; 
 
-    if (abs(diffX) < abs(diffY)) {
-      if (diffY > 0) {         // up
-        movePlayer('u');
-      }
-      else {                   // down
-        movePlayer('d');
-      }
+    int pressDiffX = abs(mouseX - startPressX);
+    int pressDiffY = abs(mouseY - startPressY);
+
+    // if a long-press (long enough and with little movement
+    if (millis() - pressTime > longPressThresh && pressDiffX < 50 && pressDiffY < 50) {
+      vibe.vibrate(1000);
     }
+
+    // otherwise, move player
     else {
-      if (diffX < 0) {         // right
-        movePlayer('r');
+      int diffX = mouseX - pmouseX;
+      int diffY = mouseY - pmouseY; 
+      if (abs(diffX) < abs(diffY)) {
+        if (diffY > 0) movePlayer('u');    // up
+        else movePlayer('d');              // down
       }
-      else {                   // left
-        movePlayer('l');
+      else {
+        if (diffX < 0) movePlayer('r');    // right
+        else movePlayer('l');              // left
       }
     }
   }
