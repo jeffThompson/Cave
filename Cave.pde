@@ -56,6 +56,7 @@ int minTileBrightness = 50;         // darkest tile (first step from background)
 int numRespawnPoints = 30;          // # of points that cause the player to spawn in a new location
 
 int longPressThresh = 300;          // time (in ms) for long-press (less will be normal click)
+int maxPressDist = 50;              // max distance the mouse can move during a long-press
 
 int minReverb = 10;                 // min amount of reverb (smallest space)
 int maxReverb = 3000;
