@@ -16,8 +16,7 @@ CAVE
  Created with generous support from Harvestworks' Cultural Innovation Fund program.
  
  TO DO:
- + Finalize color (random?)
- + Better tint (dims red, current tile)
+ + Better tint (do it in the function? - ignore respawn tiles?)
  + Sounds for: wall hit, teleport
  
  TO CONSIDER:
@@ -36,7 +35,7 @@ CAVE
  */
 
 String beepFilename = "beep_331-400-300.wav";    // sound to play when walking
-int visionDistance = 6;                          // radius of tiles shown onscreen
+int visionDistance = 4;                          // radius of tiles shown onscreen
 
 color bgColor = color(0);                 // background color (areas of level we can't go)
 color tintColor = color(255, 150, 0);     // overlay color
@@ -55,8 +54,8 @@ int inc = 40;                       // color step in random walk (or: how quickl
 int minTileBrightness = 50;         // darkest tile (first step from background)
 int numRespawnPoints = 30;          // # of points that cause the player to spawn in a new location
 
-int longPressThresh = 300;          // time (in ms) for long-press (less will be normal click)
-int maxPressDist = 50;              // max distance the mouse can move during a long-press
+int longPressThresh = 400;          // time (in ms) for long-press
+int maxPressDist = 30;              // max distance the mouse can move during a long-press
 
 int minReverb = 10;                 // min amount of reverb (smallest space)
 int maxReverb = 3000;
@@ -97,7 +96,7 @@ Vibrator vibe;
 void setup() {
   orientation(LANDSCAPE);
   rectMode(CENTER);
-  titleImage = loadImage("TitleScreen.png");
+  titleImage = loadImage("TitleScreen_textOnly.png");
   smooth();
   noStroke();
 
@@ -128,13 +127,16 @@ void setup() {
     // just be sure we can't accidentally generate the respawn color
     tintColor = color(random(50, 150), random(50, 255), random(50, 255));
   }
+  
+  // create start screen
+  displayStartScreen();
 }
 
 
 void draw() {
   // start screen
   if (startScreen) {
-    displayStartScreen();
+    //displayStartScreen();
   }
 
   // draw level
@@ -144,17 +146,27 @@ void draw() {
 
     // overlay with background color
     fill(tintColor, tintStrength);
-    rect(width/2, height/2, width, height);   // since rectMode = CENTER
-
-    // draw current tile (with no overlay)
-    fill(level.pixels[y*w + x]);
-    rect(width/2,height/2, tileSize,tileSize);
+    rect(width/2, height/2, width, height);         // since rectMode = CENTER
+    if (level.pixels[y*h + x] == respawnColor) {    // cover overlay if we're on a respawn
+      fill(respawnColor);
+      rect(width/2,height/2, tileSize,tileSize);
+    }
+    
+    // if the mouse is on and we've been doing so for a while, draw a circle to show long click
+    if (mousePressed && millis() - pressTime > longPressThresh*0.6) {
+      float s = map(millis() - pressTime, 0,longPressThresh, 0,tileSize*3);  // scale size based on press time 
+      s = constrain(s, 0,tileSize*3 - tileSize/2);                           // don't get too big!
+      if (millis() - pressTime < longPressThresh) fill(255,100);             // while ramping up, white
+      else fill(255,150,0, 100);                                             // when at thresh, orange
+      ellipse(width/2,height/2, s,s);
+    }
     drawPlayer();
 
+    // if on, display debugging info
     if (debug) {
       fill(255);
-      text("POSITION: " + x + ", " + y + "\nHEIGHT:   " + (level.pixels[y * w + x] >> 16 & 0xFF) + "\nVISION:   " + visionDistance, 50, 50);
+      String details = "POSITION: " + x + ", " + y + "\nHEIGHT:   " + (level.pixels[y * w + x] >> 16 & 0xFF) + "\nVISION:   " + visionDistance + "\nTINT:     " + (tintColor >> 16 & 0xFF)  + ", " + (tintColor >> 8 & 0xFF) + ", " + (tintColor & 0xFF);
+      text(details, 50, 50);
     }
   }
 }
-

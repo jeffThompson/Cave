@@ -25,23 +25,24 @@ public boolean dispatchTouchEvent(MotionEvent event) {
     int pressDiffX = abs(mouseX - startPressX);
     int pressDiffY = abs(mouseY - startPressY);
 
-      // if a long-press (long enough and with little movement)
-      if (millis() - pressTime > longPressThresh && pressDiffX < maxPressDist && pressDiffY < maxPressDist) {
-        vibe.vibrate(500);
+    // if not, test if a long-press (long enough and with little movement)
+    if (millis() - pressTime > longPressThresh) {
+      println(millis() - pressTime);
+      vibe.vibrate(500);
+    }
+    
+    // move player (if enough movement from start position)
+    else if (pressDiffX > maxPressDist || pressDiffY > maxPressDist) {
+      int diffX = mouseX - pmouseX;
+      int diffY = mouseY - pmouseY; 
+      if (abs(diffX) < abs(diffY)) {
+        if (diffY > 0) movePlayer('u');    // up
+        else movePlayer('d');              // down
       }
-
-      // otherwise, move player (enough movement from start position)
-      else if (pressDiffX > 80 || pressDiffY > 80) {
-        int diffX = mouseX - pmouseX;
-        int diffY = mouseY - pmouseY; 
-        if (abs(diffX) < abs(diffY)) {
-          if (diffY > 0) movePlayer('u');    // up
-          else movePlayer('d');              // down
-        }
-        else {
-          if (diffX < 0) movePlayer('r');    // right
-          else movePlayer('l');              // left
-        }
+      else {
+        if (diffX < 0) movePlayer('r');    // right
+        else movePlayer('l');              // left
+      }
     }
   }
 
