@@ -54,7 +54,7 @@ final color respawnColor = color(255, 0, 0);    // color of respawn points
 
 boolean startScreen = true;               // show title screen?
 final boolean randomTintColor = true;     // create a random overlay color on load?
-boolean debug = true;                     // print debugging info (both onscreen and via USB)
+boolean debug = false;                    // print debugging info (both onscreen and via USB)
 final boolean drainLight = true;          // limited supply of light?
 boolean tintBackground = false;           // tint background tiles as well? (off tints just a little bit)
 
