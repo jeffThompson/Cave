@@ -24,11 +24,12 @@ public boolean dispatchTouchEvent(MotionEvent event) {
 
     int pressDiffX = abs(mouseX - startPressX);
     int pressDiffY = abs(mouseY - startPressY);
-
+    println("Movement: " + pressDiffX + ", " + pressDiffY);
+    
     // if not, test if a long-press (long enough and with little movement)
-    if (millis() - pressTime > longPressThresh) {
-      println(millis() - pressTime);
-      vibe.vibrate(500);
+    if (millis() - pressTime > longPressThresh) { 
+      // println("Click time: " + (millis() - pressTime));     
+      longPress();
     }
     
     // move player (if enough movement from start position)

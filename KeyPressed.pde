@@ -11,6 +11,13 @@ void keyPressed() {
   // 'D' toggles debugging info onscreen
   else if (key == 'd') debug = !debug;
   
+  // 'T' create a respawn point right next to you
+  else if (key == 't') {
+    level.pixels[y*w + x + 1] = respawnColor;
+    int[] newPoint = { x+1, y };
+    respawnPoints = (int[][]) append(respawnPoints, newPoint);  // add new point to list of respawn locations
+  }
+  
   // 'R' restarts and builds a new level
   else if (key == 'r') {
     setup();
@@ -29,7 +36,7 @@ void keyPressed() {
   }
 
   // # keys change the distance we can see
-  else if (key > 49 && key < 58) {
+  else if (key >= 49 && key < 58) {
     visionDistance = int(key - 48);                           // 49 = 1, so 49-48 = 1!
     tileSize = min(width, height) / (visionDistance*2 + 1);   // update tile size
   }

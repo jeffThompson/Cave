@@ -8,19 +8,19 @@ void playFootsteps() {
   reverb.setDecayTime(decayTime);
 
   // play sound and vibration pattern
-  if (beep.isPlaying()) {
-    beep.seekTo(0);
-  }
-  else {
-    beep.start();
-  }
+  if (step.isPlaying()) step.seekTo(0);
+  else step.start();
   vibe.vibrate(footstepVibration, -1);
 }
 
 void playWallHit() {
+  if (wallHit.isPlaying()) wallHit.seekTo(0);
+  else wallHit.start();
   vibe.vibrate(wallHitVibration, -1);
 }
 
 void playRespawn() {
+  if (respawn.isPlaying()) respawn.seekTo(0);
+  else respawn.start();
   vibe.vibrate(respawnVibration, -1);
 }

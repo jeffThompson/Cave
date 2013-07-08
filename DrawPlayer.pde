@@ -2,6 +2,10 @@
 void drawPlayer() {
   fill(playerColor);
   
+  ellipse(width/2,height/2, tileSize/2,tileSize/2);
+  // rect(width/2,height/2, tileSize/2,tileSize/2);
+  
+  /*
   pushMatrix();
   translate(width/2, height/2);
   
@@ -22,4 +26,5 @@ void drawPlayer() {
   
   triangle(0, -tileSize/4, tileSize/4, tileSize/4, -tileSize/4, tileSize/4);
   popMatrix();
+  */
 }

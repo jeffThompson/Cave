@@ -20,7 +20,7 @@ void drawTiles() {
 
       // draw tile, dim based on distance from center
       float dist = abs(dist(0,0, tx,ty));
-      float dim = map(dist, 0, visionDistance+1, 255,0);
+      float dim = map(dist, 0, visionDistance+1, 255,0);  // +1 = last row/col will be dark
       dim = constrain(dim, 0, 255);
       fill(level.pixels[py * w + px], dim);
       rect(sx, sy, tileSize, tileSize);

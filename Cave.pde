@@ -15,18 +15,22 @@ CAVE
  
  Created with generous support from Harvestworks' Cultural Innovation Fund program.
  
+ Spatialized sound generated with the help of the Panorama plugin, automated in Max/MSP:
+ + http://wavearts.com/products/plugins/panorama (a free 30-day trial!)
+ 
  TO DO:
  + Better tint (do it in the function? - ignore respawn tiles?)
- + Sounds for: wall hit, teleport
+ + Ding when scanning and hit respawn
+ + allow scanning to wrap around image as needed (or try/catch and skip)
+ + wall beep (low, maybe a vibe too) - need in all 4 dir too
  
  TO CONSIDER:
- + Long tap-hold-release for a wall-sweep flash (like the sonar, but all around)
  
  Keyboard adjustments:
  1-9    changes the distance the player can see (in pixels)
- 'D'    toggle debugging info
+ 'D'    toggle debugging info (default off)
  'R'    reset to setup (and build a new level)
- 'Z'    full zoom out
+ 'Z'    full zoom out (default off)
  
  Required permissions:
  + MODIFY_AUDIO_SETTINGS
@@ -34,48 +38,53 @@ CAVE
  
  */
 
-String beepFilename = "beep_331-400-300.wav";    // sound to play when walking
-int visionDistance = 4;                          // radius of tiles shown onscreen
+int visionDistance = 1;                          // radius of tiles shown onscreen
 
-color bgColor = color(0);                 // background color (areas of level we can't go)
-color tintColor = color(255, 150, 0);     // overlay color
-int tintStrength = 100;                   // 0 = no tint, 255 = fully opaque (probably not a good idea)
-color playerColor = color(255);           // color of player in center
-color respawnColor = color(255,0,0);      // color of respawn points
+final String stepFilename = "beep_331-400-300.wav";    // sound to play when walking
+final String wallHitFilename = "wallHit.wav";          // sound when hitting a wall
+final String respawnFilename = "respawn.wav";          // respawn sound effect
 
-boolean startScreen = true;         // show title screen?
-boolean randomTintColor = true;     // create a random overlay color on load?
-boolean debug = true;               // print debugging info (both onscreen and via USB)
+final color bgColor = color(0);                 // background color (areas of level we can't go)
+color tintColor = color(20, 10, 0);             // overlay color
+final int tintStrength = 100;                   // 0 = no tint, 255 = fully opaque (probably not a good idea)
+final color playerColor = color(255);           // color of player in center
+final color respawnColor = color(255, 0, 0);    // color of respawn points
 
-int w = 100;                        // level dimensions
-int h = 100;
-int numSteps = 20000;               // # of steps in random walk
-int inc = 40;                       // color step in random walk (or: how quickly we get to 0)
-int minTileBrightness = 50;         // darkest tile (first step from background)
-int numRespawnPoints = 30;          // # of points that cause the player to spawn in a new location
+boolean startScreen = true;               // show title screen?
+final boolean randomTintColor = false;    // create a random overlay color on load?
+boolean debug = true;                     // print debugging info (both onscreen and via USB)
 
-int longPressThresh = 400;          // time (in ms) for long-press
-int maxPressDist = 30;              // max distance the mouse can move during a long-press
+final int w = 100;                        // level dimensions
+final int h = 100;
+final int numSteps = 20000;               // # of steps in random walk
+final int inc = 40;                       // color step in random walk (or: how quickly we get to 0)
+final int minTileBrightness = 50;         // darkest tile (first step from background)
+final int numRespawnPoints = 400;         // # of points that cause the player to spawn in a new location
 
-int minReverb = 10;                 // min amount of reverb (smallest space)
-int maxReverb = 3000;
-int decayTime = 20000;              // 10 to 20k
-short density = 1000;               // 0 to 1k
-short diffusion = 0;                // 0 to 1k
-short roomLevel = 0;                // -9k to 0
-short reverbLevel = 2000;           // -9k to 2k
-short reflectionsDelay = 0;         // 0 to 300
-short reflectionsLevel = 1000;      // -9k to 1k
-short reverbDelay = 0;              // 0 to 100
+final int longPressThresh = 500;          // time (in ms) for long-press
+final int maxPressDist = 40;              // max distance the mouse can move during a long-press
 
-long[] footstepVibration = {        // vibration pattern for footsteps (off, on, off, on...)
+
+final int minReverb = 10;                 // min amount of reverb (smallest space)
+final int maxReverb = 3000;
+int decayTime = 20000;                    // 10 to 20k (changes with tile height)
+final short density = 1000;               // 0 to 1k
+final short diffusion = 0;                // 0 to 1k
+final short roomLevel = 0;                // -9k to 0
+final short reverbLevel = 2000;           // -9k to 2k
+final short reflectionsDelay = 0;         // 0 to 300
+final short reflectionsLevel = 1000;      // -9k to 1k
+final short reverbDelay = 0;              // 0 to 100
+
+// vibration patterns (off, on, off, on...)
+final long[] footstepVibration = { 
   50, 150, 60, 100
 };
-long[] wallHitVibration = {         // pattern when hitting the wall
-  0,30
+final long[] wallHitVibration = { 
+  0, 30
 };
-long[] respawnVibration = {         // pattern when respawning
-  0,20,90,20,80,20,70,20,60,20,50,20,40,20,30,20,30,20,20,20,10,150,150
+final long[] respawnVibration = {
+  0, (1500-650), 200, 350, 50, 150    // 1500 = length of sound effect + a little bump at the end
 };
 
 PImage level, titleImage;      // level and title screen
@@ -88,9 +97,9 @@ long pressTime;                // time (in ms) for detecting long-press
 int startPressX, startPressY;  // location of mouse press (for triggering long-press)
 int[][] respawnPoints = new int[numRespawnPoints][2];
 
-MediaPlayer beep;
-EnvironmentalReverb reverb;
-Vibrator vibe;
+MediaPlayer step, wallHit, respawn, rear, left, front, right;    // sound effects
+EnvironmentalReverb reverb;                                      // reverb (for step only)
+Vibrator vibe;                                                   // vibration motor
 
 
 void setup() {
@@ -127,16 +136,16 @@ void setup() {
     // just be sure we can't accidentally generate the respawn color
     tintColor = color(random(50, 150), random(50, 255), random(50, 255));
   }
-  
+
   // create start screen
-  displayStartScreen();
+  createStartScreen();
 }
 
 
 void draw() {
   // start screen
   if (startScreen) {
-    //displayStartScreen();
+    // do nothing at all, just wait until someone touches the screen
   }
 
   // draw level
@@ -149,24 +158,31 @@ void draw() {
     rect(width/2, height/2, width, height);         // since rectMode = CENTER
     if (level.pixels[y*h + x] == respawnColor) {    // cover overlay if we're on a respawn
       fill(respawnColor);
-      rect(width/2,height/2, tileSize,tileSize);
-    }
-    
+      rect(width/2, height/2, tileSize, tileSize);
+    }    
+
     // if the mouse is on and we've been doing so for a while, draw a circle to show long click
-    if (mousePressed && millis() - pressTime > longPressThresh*0.6) {
-      float s = map(millis() - pressTime, 0,longPressThresh, 0,tileSize*3);  // scale size based on press time 
-      s = constrain(s, 0,tileSize*3 - tileSize/2);                           // don't get too big!
-      if (millis() - pressTime < longPressThresh) fill(255,100);             // while ramping up, white
-      else fill(255,150,0, 100);                                             // when at thresh, orange
-      ellipse(width/2,height/2, s,s);
-    }
+    /*if (mousePressed && millis() - pressTime > longPressThresh*0.8) {
+      float s = map(millis() - pressTime, 0, longPressThresh, 0, tileSize*2.5);  // scale size based on press time 
+      s = constrain(s, 0, tileSize*2.5);                                         // don't get too big!
+      if (millis() - pressTime < longPressThresh) fill(255, 100);                // while ramping up, white
+      else fill(255, 150, 0, 100);                                               // when at thresh, orange
+      ellipse(width/2, height/2, s, s);
+    }*/
+
+    // draw player
     drawPlayer();
 
     // if on, display debugging info
     if (debug) {
       fill(255);
-      String details = "POSITION: " + x + ", " + y + "\nHEIGHT:   " + (level.pixels[y * w + x] >> 16 & 0xFF) + "\nVISION:   " + visionDistance + "\nTINT:     " + (tintColor >> 16 & 0xFF)  + ", " + (tintColor >> 8 & 0xFF) + ", " + (tintColor & 0xFF);
+      String details = "POSITION: " + x + ", " + y;
+      details += "\nHEIGHT:   " + (level.pixels[y * w + x] >> 16 & 0xFF);
+      details += "\nVISION:   " + visionDistance;
+      details += "\nTINT:     " + (tintColor >> 16 & 0xFF)  + ", " + (tintColor >> 8 & 0xFF) + ", " + (tintColor & 0xFF);
+      details += "\nFPS:      " + frameRate;
       text(details, 50, 50);
     }
   }
 }
+

@@ -1,5 +1,5 @@
 
-void displayStartScreen() {
+void createStartScreen() {
   
   int[][] letterPx = {
     { }, 
@@ -31,6 +31,17 @@ void displayStartScreen() {
     for (int x=0; x<letterPx[i].length; x++) {
       fill(random(120,255));
       rect(letterPx[i][x] * tileSize + horizOffset, i*tileSize + vertOffset*tileSize, tileSize, tileSize);
+    }
+  }
+  
+  // dim
+  for (int y=-tileSize; y<width; y+=tileSize) {
+    for (int x=-tileSize; x<width; x+=tileSize) { 
+      float dim = abs(dist(x,y, width/2,height/2));
+      dim = map(dim, 0,width/1.5, 0,255);
+      dim = constrain(dim, 0,255);
+      fill(0,dim);
+      rect(x + horizOffset, y, tileSize, tileSize);
     }
   }
 
