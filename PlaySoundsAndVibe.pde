@@ -1,7 +1,7 @@
 
 void playFootsteps() {
 
-  // change amount of reverb based on tile  
+  // change amount of reverb based on tile
   // lighter = more reverb/higher, darker = less/lower
   float c = level.pixels[y * w + x] >> 16 & 0xFF;
   decayTime = int(map(c, minTileBrightness,255, minReverb, maxReverb));

@@ -29,10 +29,11 @@ CAVE
  
  Keyboard adjustments:
  1-9    changes the distance the player can see (in pixels)
+ 'B'    toggle background tile tinting (default off, which still tints a little bit)
  'D'    toggle debugging info (default off)
+ 'L'    toggle remaining light level UI (default off)
  'R'    reset to setup (and build a new level)
  'Z'    full zoom out (default off)
- 'B'    toggle background tile tinting (default off, which still tints a little bit)
  
  Required permissions:
  + MODIFY_AUDIO_SETTINGS
@@ -40,7 +41,8 @@ CAVE
  
  */
 
-int visionDistance = 1;         // radius of tiles shown onscreen (can be changed with # keys)
+int visionDistance = 1;            // radius of tiles shown onscreen (can be changed with # keys)
+int startScreenDuration = 3000;    // how long to display the start screen (ms)
 
 final String stepFilename = "step_331-440-300.wav";        // sound to play when walking
 final String wallHitFilename = "wallHit_100-90-440.wav";   // sound when hitting a wall
@@ -53,10 +55,12 @@ final color playerColor = color(255);           // color of player in center
 final color respawnColor = color(255, 0, 0);    // color of respawn points
 
 boolean startScreen = true;               // show title screen?
+boolean instructionScreen = true;         // show instruction screen?
 final boolean randomTintColor = true;     // create a random overlay color on load?
 boolean debug = false;                    // print debugging info (both onscreen and via USB)
 final boolean drainLight = true;          // limited supply of light?
 boolean tintBackground = false;           // tint background tiles as well? (off tints just a little bit)
+boolean showLightUI = false;              // remaining light level
 
 final int w = 100;                        // level dimensions
 final int h = 100;
@@ -92,7 +96,7 @@ final long[] wallHitVibration = {
 };
 long[] respawnVibration = new long[(6000 / 100) + 1];  // generated in setup
 
-PImage level, titleImage;      // level and title screen
+PImage level, titleImage, instructionImage;            // level and title screen
 int x, y;                      // player x,y position
 char playerDir = 'u';          // direction player is facing (for drawing player onscreen)
 int tileSize, lightSize;       // display size of each tile
@@ -101,12 +105,13 @@ int prevVisionDistance;        // reset from full zoom-out
 long pressTime;                // time (in ms) for detecting long-press
 int startPressX, startPressY;  // location of mouse press (for triggering long-press)
 PImage bgMask;                 // mask for hiding objects beyond circular light
+long startTime;                // timeout for start screen
 
 int[][] respawnPoints = new int[numRespawnPoints][2];
 
-MediaPlayer step, wallHit, respawn, rear, left, front, right;    // sound effects
-EnvironmentalReverb reverb;                                      // reverb (for step only)
-Vibrator vibe;                                                   // vibration motor
+MediaPlayer step, wallHit, respawn;    // sound effects
+EnvironmentalReverb reverb;            // reverb (for step only)
+Vibrator vibe;                         // vibration motor
 
 
 void setup() {
@@ -114,6 +119,7 @@ void setup() {
   rectMode(CENTER);
   imageMode(CENTER);
   titleImage = loadImage("TitleScreen_textOnly.png");
+  instructionImage = loadImage("InstructionScreen_textOnly.png");
   smooth();
   noStroke();
 
@@ -157,12 +163,19 @@ void setup() {
 
   // create start screen
   createStartScreen();
+  startTime = millis();
 }
 
 
 void draw() {
-  // start screen
+  // start/instructions screen
   if (startScreen) {
+    if (millis() > startTime + startScreenDuration) {
+      startScreen = false;
+      drawInstructionScreen();
+    }
+  }
+  else if (instructionScreen) {
     // do nothing at all, just wait until someone touches the screen
   }
 
@@ -210,22 +223,22 @@ void draw() {
       ellipse(width/2, height/2, lightSize, lightSize);
 
       // display the light UI
-      /*
-      rectMode(CORNER);
-       noFill();
-       stroke(255);
-       rect(100, height*0.75, 100, -height*0.5);
-       
-       noStroke();
-       fill(tintColor);
-       rect(101, height*0.75, 98, -ch);
-       rectMode(CENTER);
-       
-       textAlign(CENTER, CENTER);
-       fill(255);
-       text(nf((lightCharge/1000f), -1, 2) + "\nsec", 150, height*0.75 + 40); 
-       textAlign(LEFT, TOP);
-       */
+      if (showLightUI) {
+        rectMode(CORNER);
+        noFill();
+        stroke(255);
+        rect(100, height*0.75, 100, -height*0.5);
+
+        noStroke();
+        fill(tintColor);
+        rect(101, height*0.75, 98, -ch);
+        rectMode(CENTER);
+
+        textAlign(CENTER, CENTER);
+        fill(255);
+        text(nf((lightCharge/1000f), -1, 2) + "\nsec", 150, height*0.75 + 40); 
+        textAlign(LEFT, TOP);
+      }
     } 
 
     // draw player

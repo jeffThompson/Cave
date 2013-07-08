@@ -14,6 +14,9 @@ void keyPressed() {
   // 'D' toggles debugging info onscreen
   else if (key == 'd') debug = !debug;
   
+  // 'L' toggles light meter
+  else if (key == 'l') showLightUI = !showLightUI;
+  
   // 'T' create a respawn point right next to you
   else if (key == 't') {
     level.pixels[y*w + x + 1] = respawnColor;
