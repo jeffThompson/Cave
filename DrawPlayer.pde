@@ -3,9 +3,9 @@ void drawPlayer() {
   fill(playerColor);
   
   ellipse(width/2,height/2, tileSize/2,tileSize/2);
-  // rect(width/2,height/2, tileSize/2,tileSize/2);
   
   /*
+  // triangular player faces direction we last moved
   pushMatrix();
   translate(width/2, height/2);
   

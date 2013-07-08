@@ -47,6 +47,6 @@ void createStartScreen() {
 
   // image/text over squares
   smooth();
-  image(titleImage, 0,0);
+  image(titleImage, width/2,height/2);    // since imageMode = CENTER
 }
 

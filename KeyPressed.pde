@@ -8,6 +8,9 @@ void keyPressed() {
     inputMgr.toggleSoftInput(0, 0);
   }
   
+  // 'B' toggles background tile tinting
+  else if (key == 'b') tintBackground = !tintBackground;
+  
   // 'D' toggles debugging info onscreen
   else if (key == 'd') debug = !debug;
   
@@ -38,6 +41,7 @@ void keyPressed() {
   // # keys change the distance we can see
   else if (key >= 49 && key < 58) {
     visionDistance = int(key - 48);                           // 49 = 1, so 49-48 = 1!
-    tileSize = min(width, height) / (visionDistance*2 + 1);   // update tile size
+    tileSize = min(width, height) / (visionDistance*2 + 1);   // update tile/light size
+    lightSize = height - tileSize/2;
   }
 }

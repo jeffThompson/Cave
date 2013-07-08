@@ -77,9 +77,12 @@ void movePlayer(char dir) {
 }
 
 void respawn() {
-  int px = x;
-  int py = y; 
-
+  
+  // if on, recharge the light
+  if (drainLight) lightCharge = maxCharge;
+  
+  int px = x;  // store current location to ensure we don't respawn there
+  int py = y;
   int newPoint = int(random(numRespawnPoints)); 
   x = respawnPoints[newPoint][0];
   y = respawnPoints[newPoint][1];
@@ -90,5 +93,6 @@ void respawn() {
     y = respawnPoints[newPoint][1];
   } 
 
+  // play sounds
   playRespawn();
 }

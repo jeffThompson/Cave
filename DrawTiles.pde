@@ -1,6 +1,7 @@
 
 void drawTiles() {
 
+  // iterate surrounding tiles
   for (int ty = -visionDistance; ty <= visionDistance; ty++) {
     for (int tx = -visionDistance; tx <= visionDistance; tx++) {
 
@@ -24,6 +25,23 @@ void drawTiles() {
       dim = constrain(dim, 0, 255);
       fill(level.pixels[py * w + px], dim);
       rect(sx, sy, tileSize, tileSize);
+      
+      // if a respawn or background tile, do NOT tint
+      // otherwise, tint the tile a nice (random) shade :)
+      if (level.pixels[py * w + px] == respawnColor) {
+        fill(255);
+        ellipse(sx,sy, tileSize/12,tileSize/12);    // little dot on respawn points
+      }
+      else if (!tintBackground && level.pixels[py * w + px] == bgColor) {
+        // if specified, skip tinting background tiles
+        // or, tint just a little
+        fill(tintColor, 30);
+        rect(sx,sy, tileSize,tileSize);
+      }
+      else {
+        fill(tintColor, tintStrength);
+        rect(sx,sy, tileSize,tileSize);
+      }
     }
   }
 }

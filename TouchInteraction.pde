@@ -14,7 +14,7 @@ public boolean dispatchTouchEvent(MotionEvent event) {
 
   // when pressed, keep track of time for long-press
   else if (action == MotionEvent.ACTION_DOWN) {
-    pressTime = millis();
+    pressTime = prevMillis = millis();
     startPressX = mouseX;    // store start of press (prevents triggering long-press on movement)
     startPressY = mouseY;
   }
@@ -29,7 +29,7 @@ public boolean dispatchTouchEvent(MotionEvent event) {
     // if not, test if a long-press (long enough and with little movement)
     if (millis() - pressTime > longPressThresh) { 
       // println("Click time: " + (millis() - pressTime));     
-      longPress();
+      // longPress();
     }
     
     // move player (if enough movement from start position)

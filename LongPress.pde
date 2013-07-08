@@ -1,5 +1,7 @@
 
 void longPress() {
+  
+  // nothing here - this is executed when a long-press is released
 
   /*
   int duration = 500;     // duration to play each note

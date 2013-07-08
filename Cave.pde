@@ -13,24 +13,26 @@ import android.view.MotionEvent;                      // fancy touch access
 CAVE
  Jeff Thompson | 2013 | www.jeffreythompson.org
  
+ Wander an algorithmic cave, listening for the height of the ceiling changing and
+ bumping into walls. But don't let your light go out, or you'll be left in the dark!
+ 
+ Swipe your finger up/right/down/left to move your player. A long-tap will illuminate
+ neighboring tiles but it will drain your light!
+ 
  Created with generous support from Harvestworks' Cultural Innovation Fund program.
  
- Spatialized sound generated with the help of the Panorama plugin, automated in Max/MSP:
- + http://wavearts.com/products/plugins/panorama (a free 30-day trial!)
- 
  TO DO:
- + Better tint (do it in the function? - ignore respawn tiles?)
- + Ding when scanning and hit respawn
- + allow scanning to wrap around image as needed (or try/catch and skip)
- + wall beep (low, maybe a vibe too) - need in all 4 dir too
+ + .. 
  
  TO CONSIDER:
+ + light could move with mouseX/Y; stop when light hits edge of screen?
  
  Keyboard adjustments:
  1-9    changes the distance the player can see (in pixels)
  'D'    toggle debugging info (default off)
  'R'    reset to setup (and build a new level)
  'Z'    full zoom out (default off)
+ 'B'    toggle background tile tinting (default off, which still tints a little bit)
  
  Required permissions:
  + MODIFY_AUDIO_SETTINGS
@@ -38,11 +40,11 @@ CAVE
  
  */
 
-int visionDistance = 1;                          // radius of tiles shown onscreen
+int visionDistance = 1;         // radius of tiles shown onscreen (can be changed with # keys)
 
-final String stepFilename = "beep_331-400-300.wav";    // sound to play when walking
-final String wallHitFilename = "wallHit.wav";          // sound when hitting a wall
-final String respawnFilename = "respawn.wav";          // respawn sound effect
+final String stepFilename = "step_331-440-300.wav";        // sound to play when walking
+final String wallHitFilename = "wallHit_100-90-440.wav";   // sound when hitting a wall
+final String respawnFilename = "respawn_10.wav";           // respawn sound effect
 
 final color bgColor = color(0);                 // background color (areas of level we can't go)
 color tintColor = color(20, 10, 0);             // overlay color
@@ -51,8 +53,10 @@ final color playerColor = color(255);           // color of player in center
 final color respawnColor = color(255, 0, 0);    // color of respawn points
 
 boolean startScreen = true;               // show title screen?
-final boolean randomTintColor = false;    // create a random overlay color on load?
+final boolean randomTintColor = true;     // create a random overlay color on load?
 boolean debug = true;                     // print debugging info (both onscreen and via USB)
+final boolean drainLight = true;          // limited supply of light?
+boolean tintBackground = false;           // tint background tiles as well? (off tints just a little bit)
 
 final int w = 100;                        // level dimensions
 final int h = 100;
@@ -64,6 +68,9 @@ final int numRespawnPoints = 400;         // # of points that cause the player t
 final int longPressThresh = 500;          // time (in ms) for long-press
 final int maxPressDist = 40;              // max distance the mouse can move during a long-press
 
+final int maxCharge = 60 * 1000;          // starting charge for light (in ms)
+int lightCharge = maxCharge;              // current charge (goes down as player long-clicks
+long prevMillis;                          // keep track of time we've had the light on
 
 final int minReverb = 10;                 // min amount of reverb (smallest space)
 final int maxReverb = 3000;
@@ -83,18 +90,18 @@ final long[] footstepVibration = {
 final long[] wallHitVibration = { 
   0, 30
 };
-final long[] respawnVibration = {
-  0, (1500-650), 200, 350, 50, 150    // 1500 = length of sound effect + a little bump at the end
-};
+long[] respawnVibration = new long[(6000 / 100) + 1];  // generated in setup
 
 PImage level, titleImage;      // level and title screen
 int x, y;                      // player x,y position
 char playerDir = 'u';          // direction player is facing (for drawing player onscreen)
-int tileSize;                  // display size of each tile
+int tileSize, lightSize;       // display size of each tile
 PFont font;                    // debugging font
 int prevVisionDistance;        // reset from full zoom-out
 long pressTime;                // time (in ms) for detecting long-press
 int startPressX, startPressY;  // location of mouse press (for triggering long-press)
+PImage bgMask;                 // mask for hiding objects beyond circular light
+
 int[][] respawnPoints = new int[numRespawnPoints][2];
 
 MediaPlayer step, wallHit, respawn, rear, left, front, right;    // sound effects
@@ -105,6 +112,7 @@ Vibrator vibe;                                                   // vibration mo
 void setup() {
   orientation(LANDSCAPE);
   rectMode(CENTER);
+  imageMode(CENTER);
   titleImage = loadImage("TitleScreen_textOnly.png");
   smooth();
   noStroke();
@@ -117,10 +125,12 @@ void setup() {
   // create level image
   println("Building level...");
   createLevel();
-  level.loadPixels();                                      // load for access to color array (throws an error in Android if you don't)
-  tileSize = min(width, height) / (visionDistance*2 + 1);  // size tiles based on screen dims
+  level.loadPixels();                                       // load for access to color array (throws an error in Android if you don't)
+  tileSize = min(width, height) / (visionDistance*2 + 1);   // size tiles based on screen dims  
+  lightSize = height - tileSize/2;                          // flashlight diameter
+  prevMillis = 0;
 
-  // load fonts
+  // load font for debugging
   println("Loading fonts...");
   font = createFont("Monospaced", height/36);
   textFont(font);
@@ -130,6 +140,14 @@ void setup() {
   println("Loading sounds...");
   loadSounds();
   vibe = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+  respawnVibration[0] = 0;
+  for (int i=1; i<respawnVibration.length; i+=2) {    // create rumble the length of the respawn sound
+    respawnVibration[i] = 50;
+    respawnVibration[i+1] = 50;
+  }
+
+  // create background mask for light pool on long-press
+  createBackgroundMask();
 
   // random background/overlay color, if specified
   if (randomTintColor) {
@@ -151,24 +169,64 @@ void draw() {
   // draw level
   else {
     background(bgColor);
-    drawTiles();
 
-    // overlay with background color
-    fill(tintColor, tintStrength);
-    rect(width/2, height/2, width, height);         // since rectMode = CENTER
-    if (level.pixels[y*h + x] == respawnColor) {    // cover overlay if we're on a respawn
-      fill(respawnColor);
-      rect(width/2, height/2, tileSize, tileSize);
-    }    
+    // draw current tile
+    fill(level.pixels[y*h+x]);
+    rect(width/2, height/2, tileSize, tileSize);
+    fill(tintColor, tintStrength);                     // tint to level color
+    rect(width/2, height/2, tileSize, tileSize);    
 
     // if the mouse is on and we've been doing so for a while, draw a circle to show long click
-    /*if (mousePressed && millis() - pressTime > longPressThresh*0.8) {
-      float s = map(millis() - pressTime, 0, longPressThresh, 0, tileSize*2.5);  // scale size based on press time 
-      s = constrain(s, 0, tileSize*2.5);                                         // don't get too big!
-      if (millis() - pressTime < longPressThresh) fill(255, 100);                // while ramping up, white
-      else fill(255, 150, 0, 100);                                               // when at thresh, orange
-      ellipse(width/2, height/2, s, s);
-    }*/
+    if (mousePressed && millis() - pressTime > longPressThresh*0.5) {
+
+      //lightCharge -= int(millis() - pressTime);
+      lightCharge -= millis() - prevMillis;
+      prevMillis = millis();
+
+      // while ramping up
+      if (millis() - pressTime < longPressThresh) {
+        float s = map(millis() - pressTime, 0, longPressThresh, 0, lightSize);  // scale size based on press time 
+        s = constrain(s, 0, lightSize);                                         // don't get too big!
+        fill(255, 100);                                                         // while ramping up, white
+        ellipse(width/2, height/2, s, s);
+      }
+
+      // when lit, draw tiles around us
+      else {
+        drawTiles();                                         // draw, dim, and tint surrounding tiles
+        image(bgMask, width/2, height/2, width, height);     // then draw mask to light pool
+      }
+    }
+
+    // if specified, show remaining light charge
+    if (drainLight) {
+
+      int chargeWidth = 100;
+      int chargeHeight = height/2;
+      float ch = map(lightCharge, maxCharge, 0, chargeHeight, 2);
+
+      // dim the view as we drain the light
+      fill(0, map(lightCharge, maxCharge, 0, 0, 255));
+      ellipse(width/2, height/2, lightSize, lightSize);
+
+      // display the light UI
+      /*
+      rectMode(CORNER);
+       noFill();
+       stroke(255);
+       rect(100, height*0.75, 100, -height*0.5);
+       
+       noStroke();
+       fill(tintColor);
+       rect(101, height*0.75, 98, -ch);
+       rectMode(CENTER);
+       
+       textAlign(CENTER, CENTER);
+       fill(255);
+       text(nf((lightCharge/1000f), -1, 2) + "\nsec", 150, height*0.75 + 40); 
+       textAlign(LEFT, TOP);
+       */
+    } 
 
     // draw player
     drawPlayer();
