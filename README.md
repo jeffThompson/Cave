@@ -1,3 +1,5 @@
+![Screenshot](https://raw.github.com/jeffThompson/Cave/master/Screenshots/Gameplay_03.png)
+
 Cave
 ====
 
