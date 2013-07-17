@@ -19,7 +19,7 @@ void createLevel() {
     float r = level.pixels[py * w + px] >> 16 & 0xFF;   // get current color
     if (r == 0) r = minTileBrightness;
     else r += inc;
-    r = constrain(r, 0, 255);
+    r = constrain(r, 0, 100);      // not too bright (or you won't be able to see the player!)
     level.pixels[py * w + px] = color(r);
 
     px += int(random(-2, 2));      // random walk (+/-1)
@@ -48,7 +48,8 @@ void createLevel() {
     px = int(random(w));
     py = int(random(h));
 
-    while (level.pixels[py * w + px] == bgColor) {
+    // make sure respawn points are not in the background and not where the player starts
+    while (level.pixels[py * w + px] == bgColor && px != x && py != y) {
       px = int(random(w));
       py = int(random(h));
     }
